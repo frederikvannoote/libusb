@@ -4670,7 +4670,7 @@ static int composite_submit_control_transfer(int sub_api, struct usbi_transfer *
 				usbi_dbg(TRANSFER_CTX(transfer), "using interface %d", iface);
 				r = priv->usb_interface[iface].apib->submit_control_transfer(priv->usb_interface[iface].sub_api, itransfer);
 				// If not supported on this API, it may be supported on another, so don't give up yet!!
-				if (r == LIBUSB_ERROR_NOT_SUPPORTED)
+				if (r == LIBUSB_ERROR_NOT_SUPPORTED || r == LIBUSB_ERROR_NOT_FOUND)
 					continue;
 				return r;
 			}

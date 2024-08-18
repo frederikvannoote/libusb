@@ -2128,13 +2128,15 @@ static int winusb_claim_interface(struct libusb_device_handle *dev_handle, uint8
 
 	CHECK_SUPPORTED_API(priv->apib, claim_interface);
 
-	safe_free(priv->usb_interface[iface].endpoint);
-	priv->usb_interface[iface].nb_endpoints = 0;
-
 	r = priv->apib->claim_interface(SUB_API_NOTSET, dev_handle, iface);
 
 	if (r == LIBUSB_SUCCESS)
+	{
+		safe_free(priv->usb_interface[iface].endpoint);
+		priv->usb_interface[iface].nb_endpoints = 0;
+
 		r = windows_assign_endpoints(dev_handle, iface, 0);
+	}
 
 	return r;
 }
@@ -2146,13 +2148,14 @@ static int winusb_set_interface_altsetting(struct libusb_device_handle *dev_hand
 
 	CHECK_SUPPORTED_API(priv->apib, set_interface_altsetting);
 
-	safe_free(priv->usb_interface[iface].endpoint);
-	priv->usb_interface[iface].nb_endpoints = 0;
-
 	r = priv->apib->set_interface_altsetting(SUB_API_NOTSET, dev_handle, iface, altsetting);
 
 	if (r == LIBUSB_SUCCESS)
+	{
+		safe_free(priv->usb_interface[iface].endpoint);
+		priv->usb_interface[iface].nb_endpoints = 0;
 		r = windows_assign_endpoints(dev_handle, iface, altsetting);
+	}
 
 	return r;
 }
@@ -2620,11 +2623,12 @@ static HANDLE ensure_dev_handle(struct libusb_device_handle* dev_handle, uint8_t
 	if ((priv->usb_interface[iface].path != NULL)
 		&& (priv->usb_interface[iface].apib->id == USB_API_WINUSBX)) {
 		usbi_dbg(ctx, "Late opening device handle for interface %d, path: '%s'", iface, priv->usb_interface[iface].path);
-		handle_priv->interface_handle[iface].dev_handle = windows_open(dev_handle, priv->usb_interface[iface].path, GENERIC_READ | GENERIC_WRITE);
-		handle_priv->interface_handle[iface].claimed_interfaces_count = 0;
-		if (handle_priv->interface_handle[iface].dev_handle == INVALID_HANDLE_VALUE) {
+		HANDLE winusbxHandle = windows_open(dev_handle, priv->usb_interface[iface].path, GENERIC_READ | GENERIC_WRITE);
+		if (winusbxHandle == INVALID_HANDLE_VALUE) {
 			return INVALID_HANDLE_VALUE;
 		}
+		handle_priv->interface_handle[iface].dev_handle = winusbxHandle;
+		handle_priv->interface_handle[iface].claimed_interfaces_count = 0;
 	}
 
 	return handle_priv->interface_handle[iface].dev_handle;

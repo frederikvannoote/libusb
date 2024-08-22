@@ -1,2 +1,1 @@
-
 #define LIBUSB_NANO 60002

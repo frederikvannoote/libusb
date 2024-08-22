@@ -1492,7 +1492,7 @@ static int get_guid(struct libusb_context *ctx, char *dev_id, HDEVINFO *dev_info
 			// The GUID was read successfully
 			break;
 		} else if (s == ERROR_FILE_NOT_FOUND) {
-			usbi_info(ctx, "no DeviceInterfaceGUID registered for '%s'", dev_id);
+			usbi_dbg(ctx, "no DeviceInterfaceGUID registered for '%s'", dev_id);
 			err = LIBUSB_ERROR_ACCESS;
 			goto exit;
 		} else if (s == ERROR_MORE_DATA) {
@@ -1572,7 +1572,6 @@ static int get_guid(struct libusb_context *ctx, char *dev_id, HDEVINFO *dev_info
 		usbi_warn(ctx, "device '%s' has malformed DeviceInterfaceGUID string '%s', skipping", dev_id, guid);
 		free(*if_guid);
 		*if_guid = NULL;
-		err = LIBUSB_ERROR_NO_MEM;
 		goto exit;
 	}
 
@@ -1767,7 +1766,7 @@ static int winusb_get_device_list(struct libusb_context *ctx, struct discovered_
 				}
 				// ...and to add the additional device interface GUIDs
 				r = get_guid(ctx, dev_id, dev_info, &dev_info_data, 0, &if_guid);
-				if (r == LIBUSB_SUCCESS) {
+				if (r == LIBUSB_SUCCESS && if_guid != NULL) {
 					// Check if we've already seen this GUID
 					for (j = EXT_PASS; j < nb_guids; j++) {
 						if (memcmp(guid_list[j], if_guid, sizeof(*if_guid)) == 0)
@@ -1796,7 +1795,9 @@ static int winusb_get_device_list(struct libusb_context *ctx, struct discovered_
 				} else if (r == LIBUSB_ERROR_NO_MEM) {
 					LOOP_BREAK(LIBUSB_ERROR_NO_MEM);
 				} else {
-					usbi_warn(ctx, "unexpected error during getting DeviceInterfaceGUID for '%s'", dev_id);
+					if (r != LIBUSB_SUCCESS) {
+						usbi_warn(ctx, "unexpected error during getting DeviceInterfaceGUID for '%s'", dev_id);
+					}
 				}
 				break;
 			case HID_PASS:
@@ -4778,14 +4779,14 @@ static int composite_reset_device(int sub_api, struct libusb_device_handle *dev_
 		available[i] = false;
 
 	for (i = 0; i < USB_MAXINTERFACES; i++) {
-		if ((priv->usb_interface[i].apib->id == USB_API_WINUSBX)
-				&& (priv->usb_interface[i].sub_api != SUB_API_NOTSET))
+		if (((priv->usb_interface[i].apib->id == USB_API_WINUSBX) || (priv->usb_interface[i].apib->id == USB_API_HID))
+			&& (priv->usb_interface[i].sub_api != SUB_API_NOTSET))
 			available[priv->usb_interface[i].sub_api] = true;
 	}
 
 	for (i = 0; i < SUB_API_MAX; i++) {
 		if (available[i]) {
-			r = usb_api_backend[USB_API_WINUSBX].reset_device(i, dev_handle);
+			r = usb_api_backend[USB_API_HID].reset_device(i, dev_handle);
 			if (r != LIBUSB_SUCCESS)
 				return r;
 		}
